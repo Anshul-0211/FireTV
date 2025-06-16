@@ -33,6 +33,8 @@ import { Movie, MovieRating } from '@/types/movie';
 import { useWatchedMovie } from '@/hooks/useWatchedMovie';
 import { useWatchedMovies } from '@/hooks/useWatchedMovies';
 import { createWatchedMovieDisplay, getRatingDisplay } from '@/utils/movie.utils';
+import { useMoodSelector } from '@/hooks/useMoodSelector';
+import { MoodSelector } from '@/components/MoodSelector';
 import Link from 'next/link';
 
 export default function ShauryaProfile() {
@@ -64,6 +66,13 @@ export default function ShauryaProfile() {
     error: watchedError,
     refreshWatchedMovies 
   } = useWatchedMovies('shaurya');
+
+  // Mood selector for Shaurya's profile
+  const {
+    moodState,
+    selectMood,
+    hideMoodSelector
+  } = useMoodSelector('shaurya', 'shaurya');
 
   // Filter hero content for Shaurya's preferences
   const shauryaHeroContent = heroContent.filter(movie => 
@@ -620,6 +629,15 @@ export default function ShauryaProfile() {
       )}
 
       <MovieModal />
+      
+      {/* Mood Selector */}
+      <MoodSelector
+        isOpen={moodState.showMoodSelector}
+        isAnimating={moodState.isAnimating}
+        onMoodSelect={selectMood}
+        onClose={hideMoodSelector}
+        userName="Shaurya"
+      />
     </div>
   );
 } 

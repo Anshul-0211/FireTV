@@ -33,6 +33,8 @@ import { Movie, MovieRating } from '@/types/movie';
 import { useWatchedMovie } from '@/hooks/useWatchedMovie';
 import { useWatchedMovies } from '@/hooks/useWatchedMovies';
 import { createWatchedMovieDisplay, getRatingDisplay } from '@/utils/movie.utils';
+import { useMoodSelector } from '@/hooks/useMoodSelector';
+import { MoodSelector } from '@/components/MoodSelector';
 import Link from 'next/link';
 
 export default function ShikharProfile() {
@@ -64,6 +66,13 @@ export default function ShikharProfile() {
     error: watchedError,
     refreshWatchedMovies 
   } = useWatchedMovies('shikhar');
+
+  // Mood selector for Shikhar's profile
+  const {
+    moodState,
+    selectMood,
+    hideMoodSelector
+  } = useMoodSelector('shikhar', 'shikhar');
 
   // Filter hero content for Shikhar's preferences
   const shikharHeroContent = heroContent.filter(movie => 
@@ -573,6 +582,15 @@ export default function ShikharProfile() {
       )}
 
       <MovieModal />
+      
+      {/* Mood Selector */}
+      <MoodSelector
+        isOpen={moodState.showMoodSelector}
+        isAnimating={moodState.isAnimating}
+        onMoodSelect={selectMood}
+        onClose={hideMoodSelector}
+        userName="Shikhar"
+      />
     </div>
   );
 } 

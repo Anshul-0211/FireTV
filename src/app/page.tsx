@@ -33,6 +33,8 @@ import { Movie, MovieRating } from '@/types/movie';
 import { useWatchedMovie } from '@/hooks/useWatchedMovie';
 import { useWatchedMovies } from '@/hooks/useWatchedMovies';
 import { createWatchedMovieDisplay, getRatingDisplay } from '@/utils/movie.utils';
+import { useMoodSelector } from '@/hooks/useMoodSelector';
+import { MoodSelector } from '@/components/MoodSelector';
 import Link from 'next/link';
 
 export default function FireTVHome() {
@@ -108,6 +110,13 @@ export default function FireTVHome() {
     error: watchedError,
     refreshWatchedMovies 
   } = useWatchedMovies();
+
+  // Mood selector for main page
+  const {
+    moodState,
+    selectMood,
+    hideMoodSelector
+  } = useMoodSelector(undefined, 'main');
 
   // Loading Component
   const LoadingSpinner = () => (
@@ -662,6 +671,14 @@ export default function FireTVHome() {
 
       {/* Movie Details Modal */}
       <MovieModal />
+      
+      {/* Mood Selector */}
+      <MoodSelector
+        isOpen={moodState.showMoodSelector}
+        isAnimating={moodState.isAnimating}
+        onMoodSelect={selectMood}
+        onClose={hideMoodSelector}
+      />
     </div>
   );
 }
