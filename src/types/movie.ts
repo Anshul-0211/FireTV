@@ -35,6 +35,7 @@ export interface TMDBGenresResponse {
 // Internal App Types (normalized)
 export interface Movie {
   id: number;
+  tmdbId: number; // TMDB ID for database tracking
   title: string;
   description: string;
   image: string;
@@ -94,4 +95,27 @@ export interface BackendRecommendation {
     confidence: number;
   };
   recommendation_reason?: string;
+}
+
+// Database Integration Types
+export interface WatchedMovie {
+  movieId: number;
+  tmdbId: number;
+  title: string;
+  watchedAt: Date;
+  rating: MovieRating;
+  userId?: string; // For future user-specific data
+}
+
+export enum MovieRating {
+  DISLIKED = 'disliked',     // thumbs down
+  GOOD = 'good',             // one thumbs up
+  LOVED = 'loved'            // two thumbs up
+}
+
+export interface WatchedMovieState {
+  isWatched: boolean;
+  rating?: MovieRating;
+  showRating: boolean;
+  isAnimating: boolean;
 } 

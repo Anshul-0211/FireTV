@@ -15,7 +15,10 @@ import {
   ChevronRight,
   RefreshCw,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Check,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 import {
   Carousel,
@@ -26,7 +29,10 @@ import {
 } from "@/components/ui/carousel"
 import Autoplay from "embla-carousel-autoplay"
 import { useMovieData } from '@/hooks/useMovieData';
-import { Movie } from '@/types/movie';
+import { Movie, MovieRating } from '@/types/movie';
+import { useWatchedMovie } from '@/hooks/useWatchedMovie';
+import { useWatchedMovies } from '@/hooks/useWatchedMovies';
+import { createWatchedMovieDisplay, getRatingDisplay } from '@/utils/movie.utils';
 import Link from 'next/link';
 
 export default function ShauryaProfile() {
@@ -51,6 +57,14 @@ export default function ShauryaProfile() {
     refetch 
   } = useMovieData(false);
 
+  // Fetch watched movies for Shaurya
+  const { 
+    watchedMovies, 
+    loading: watchedLoading, 
+    error: watchedError,
+    refreshWatchedMovies 
+  } = useWatchedMovies('shaurya');
+
   // Filter hero content for Shaurya's preferences
   const shauryaHeroContent = heroContent.filter(movie => 
     movie.genre && ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller', 'Adventure'].includes(movie.genre)
@@ -72,9 +86,99 @@ export default function ShauryaProfile() {
       ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller', 'Adventure'].includes(movie.genre)
     );
 
-  // Movie Details Modal Component
+  // Movie Details Modal Component with Watched functionality
   const MovieModal = () => {
     if (!isModalOpen || !selectedMovie) return null;
+
+    // Use watched movie hook for Shaurya
+    const { watchedState, markAsWatched, setRating } = useWatchedMovie(
+      selectedMovie.id,
+      selectedMovie.tmdbId || selectedMovie.id,
+      selectedMovie.title,
+      'shaurya' // User ID for profile
+    );
+
+    // Refresh watched movies when a movie is marked as watched
+    const handleMarkAsWatched = async () => {
+      await markAsWatched();
+      refreshWatchedMovies(); // Refresh the watched movies list
+    };
+
+    const WatchedButton = () => {
+      if (watchedState.isWatched && !watchedState.isAnimating) {
+        return (
+          <div className="flex items-center gap-3">
+            <Button 
+              className="bg-green-600 text-white hover:bg-green-700 text-sm px-4 py-2 cursor-default"
+              disabled
+            >
+              <Check className="mr-2 h-3 w-3" />
+              Watched
+            </Button>
+            
+            {watchedState.showRating && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-300">Rate:</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`hover:bg-white/20 p-1 ${
+                    watchedState.rating === MovieRating.DISLIKED ? 'bg-red-600 text-white' : 'text-gray-400'
+                  }`}
+                  onClick={() => setRating(MovieRating.DISLIKED)}
+                  title="Didn't like it"
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`hover:bg-white/20 p-1 ${
+                    watchedState.rating === MovieRating.GOOD ? 'bg-blue-600 text-white' : 'text-gray-400'
+                  }`}
+                  onClick={() => setRating(MovieRating.GOOD)}
+                  title="Good"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`hover:bg-white/20 p-1 relative ${
+                    watchedState.rating === MovieRating.LOVED ? 'bg-yellow-600 text-white' : 'text-gray-400'
+                  }`}
+                  onClick={() => setRating(MovieRating.LOVED)}
+                  title="Loved it!"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  <ThumbsUp className="h-3 w-3 absolute -top-1 -right-1" />
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <Button 
+          variant="outline" 
+          className={`border-white text-white hover:bg-white/20 text-sm px-4 py-2 transition-all duration-300 ${
+            watchedState.isAnimating ? 'animate-pulse bg-green-600 border-green-600' : ''
+          }`}
+          onClick={handleMarkAsWatched}
+          disabled={watchedState.isAnimating}
+        >
+          {watchedState.isAnimating ? (
+            <>
+              <Check className="mr-2 h-3 w-3 animate-bounce" />
+              Marking as Watched...
+            </>
+          ) : (
+            'Watched?'
+          )}
+        </Button>
+      );
+    };
 
     return (
       <div 
@@ -142,7 +246,7 @@ export default function ShauryaProfile() {
                   <p className="text-white leading-relaxed mb-4 text-sm line-clamp-4">
                     {selectedMovie.description}
                   </p>
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3 mb-4">
                     <Button className="bg-white text-black hover:bg-gray-200 text-sm px-4 py-2">
                       <Play className="mr-2 h-3 w-3" />
                       Watch Now
@@ -152,6 +256,9 @@ export default function ShauryaProfile() {
                       More Info
                     </Button>
                   </div>
+
+                  {/* Watched Status and Rating */}
+                  <WatchedButton />
                 </div>
               </div>
             </div>
@@ -193,6 +300,48 @@ export default function ShauryaProfile() {
       </CardContent>
     </Card>
   );
+
+  // Watched Movie Card Component
+  const WatchedMovieCard = ({ watchedMovie }: { watchedMovie: any }) => {
+    const ratingDisplay = getRatingDisplay(watchedMovie.rating);
+    const movieDisplay = createWatchedMovieDisplay(watchedMovie);
+    
+    return (
+      <Card 
+        className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-all duration-300 hover:scale-105 cursor-pointer p-0 relative"
+        onClick={() => handleMovieClick(movieDisplay as Movie)}
+      >
+        <CardContent className="p-0">
+          <div className="aspect-[2/3] bg-gray-700 rounded-t-lg mb-3 overflow-hidden relative">
+            <img 
+              src={movieDisplay.image} 
+              alt={movieDisplay.title}
+              className="w-full h-full object-cover"
+            />
+            {/* Watched Badge */}
+            <div className="absolute top-2 right-2 bg-green-600 rounded-full p-1">
+              <Check className="h-3 w-3 text-white" />
+            </div>
+          </div>
+          <div className="px-3 pb-3">
+            <h3 className="text-sm font-medium text-white mb-1 line-clamp-2">{movieDisplay.title}</h3>
+            <div className="flex items-center justify-between mb-1">
+              <Badge variant="secondary" className="text-xs bg-green-700 text-green-300">
+                Watched
+              </Badge>
+              <span className={`text-xs ${ratingDisplay.color}`}>{ratingDisplay.icon}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">
+                {new Date(watchedMovie.watchedAt).toLocaleDateString()}
+              </span>
+              <span className={`text-xs ${ratingDisplay.color}`}>{ratingDisplay.text}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-black text-white">
@@ -435,6 +584,37 @@ export default function ShauryaProfile() {
             {shauryaMovies(nowPlayingMovies).slice(0, 8).map((movie) => (
               <MovieCard key={movie.id} movie={movie} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Watched Movies Section */}
+      {!watchedLoading && !watchedError && watchedMovies.length > 0 && (
+        <div className="px-8 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-green-400 flex items-center">
+              <Check className="mr-3 h-6 w-6" />
+              Watched
+            </h2>
+            <Badge variant="secondary" className="bg-green-700 text-green-300">
+              {watchedMovies.length} movies
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            {watchedMovies.map((watchedMovie) => (
+              <WatchedMovieCard key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} watchedMovie={watchedMovie} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty Watched State */}
+      {!watchedLoading && !watchedError && watchedMovies.length === 0 && (
+        <div className="px-8 py-6">
+          <div className="text-center text-gray-400">
+            <Check className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No watched movies yet</h3>
+            <p className="text-sm">Start watching movies and mark them as watched to see them here!</p>
           </div>
         </div>
       )}

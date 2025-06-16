@@ -31,6 +31,7 @@ export const transformTMDBToMovie = (tmdbMovie: TMDBMovie): Movie => {
   
   return {
     id: tmdbMovie.id,
+    tmdbId: tmdbMovie.id, // Store TMDB ID for tracking
     title: tmdbMovie.title,
     description: tmdbMovie.overview,
     image: tmdbService.getPosterURL(tmdbMovie.poster_path),
@@ -137,6 +138,40 @@ export const prepareRecommendationRequest = (userId?: string, preferences?: any)
     preferences,
     timestamp: new Date().toISOString()
   };
+};
+
+// Convert WatchedMovie back to Movie format for display
+export const createWatchedMovieDisplay = (watchedMovie: WatchedMovie): Partial<Movie> => {
+  return {
+    id: watchedMovie.movieId,
+    tmdbId: watchedMovie.tmdbId,
+    title: watchedMovie.title,
+    // Since we don't store full movie data, we'll use placeholders
+    // In a real app, you'd fetch full movie data from TMDB using tmdbId
+    description: 'Movie you\'ve watched',
+    image: `https://via.placeholder.com/300x450/374151/9CA3AF?text=${encodeURIComponent(watchedMovie.title)}`,
+    backdropImage: `https://via.placeholder.com/600x400/374151/9CA3AF?text=${encodeURIComponent(watchedMovie.title)}`,
+    rating: 'Watched',
+    genre: 'Various',
+    genres: ['Various'],
+    releaseDate: watchedMovie.watchedAt.toString(),
+    voteAverage: 7.0,
+    isAdult: false
+  };
+};
+
+// Get rating display for watched movies
+export const getRatingDisplay = (rating: string): { icon: string; color: string; text: string } => {
+  switch (rating) {
+    case 'disliked':
+      return { icon: '👎', color: 'text-red-400', text: 'Didn\'t like it' };
+    case 'good':
+      return { icon: '👍', color: 'text-blue-400', text: 'Good' };
+    case 'loved':
+      return { icon: '👍👍', color: 'text-yellow-400', text: 'Loved it!' };
+    default:
+      return { icon: '📺', color: 'text-gray-400', text: 'Watched' };
+  }
 };
 
 // Error handling utilities
