@@ -15,7 +15,7 @@ import {
   ChevronRight,
   RefreshCw,
   AlertCircle,
-  Users
+  ArrowLeft
 } from 'lucide-react';
 import {
   Carousel,
@@ -29,60 +29,16 @@ import { useMovieData } from '@/hooks/useMovieData';
 import { Movie } from '@/types/movie';
 import Link from 'next/link';
 
-export default function FireTVHome() {
+export default function ShauryaProfile() {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   const plugin = useRef(
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
-  // Profile data
-  const profiles = [
-    {
-      name: 'Anshul',
-      initial: 'A',
-      color: 'bg-blue-500',
-      path: '/anshul',
-      description: 'Action & Thriller'
-    },
-    {
-      name: 'Shikhar',
-      initial: 'S',
-      color: 'bg-orange-500',
-      path: '/shikhar',
-      description: 'Comedy & Family'
-    },
-    {
-      name: 'Priyanshu',
-      initial: 'P',
-      color: 'bg-purple-500',
-      path: '/priyanshu',
-      description: 'Drama & Romance'
-    },
-    {
-      name: 'Shaurya',
-      initial: 'S',
-      color: 'bg-red-500',
-      path: '/shaurya',
-      description: 'Horror & Sci-Fi'
-    }
-  ];
-
-  // Handle movie click
-  const handleMovieClick = (movie: Movie) => {
-    setSelectedMovie(movie);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedMovie(null);
-  };
-  
-  // Fetch real movie data from TMDB
-  // Set useBackend to true when you want to use your backend instead of TMDB
+  // Shaurya's preferences - Horror, Sci-Fi, Fantasy
   const { 
     heroContent, 
     trendingMovies, 
@@ -93,48 +49,34 @@ export default function FireTVHome() {
     loading, 
     error, 
     refetch 
-  } = useMovieData(false); // Change to true when backend is ready
+  } = useMovieData(false);
 
-  // Loading Component
-  const LoadingSpinner = () => (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex flex-col items-center space-y-4">
-        <RefreshCw className="h-8 w-8 animate-spin text-orange-500" />
-        <p className="text-white/80">Loading amazing content...</p>
-      </div>
-    </div>
-  );
+  // Filter hero content for Shaurya's preferences
+  const shauryaHeroContent = heroContent.filter(movie => 
+    movie.genre && ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller', 'Adventure'].includes(movie.genre)
+  ).slice(0, 5);
 
-  // Error Component
-  const ErrorDisplay = () => (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex flex-col items-center space-y-4 text-center">
-        <AlertCircle className="h-8 w-8 text-red-500" />
-        <p className="text-white/80 max-w-md">
-          {error || 'Failed to load content'}
-        </p>
-        <Button 
-          onClick={refetch} 
-          variant="outline" 
-          className="border-white text-white hover:bg-white/20"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Retry
-        </Button>
-        <p className="text-sm text-white/60">
-          Note: You need to add your TMDB API key to use real movie data.
-          <br />
-          Create a .env.local file with NEXT_PUBLIC_TMDB_API_KEY=your-key
-        </p>
-      </div>
-    </div>
-  );
+  const handleMovieClick = (movie: Movie) => {
+    setSelectedMovie(movie);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedMovie(null);
+  };
+
+  // Filter movies for Shaurya's preferences (Horror, Sci-Fi, Fantasy)
+  const shauryaMovies = (movies: Movie[]) => 
+    movies.filter(movie => 
+      ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller', 'Adventure'].includes(movie.genre)
+    );
 
   // Movie Details Modal Component
   const MovieModal = () => {
     if (!isModalOpen || !selectedMovie) return null;
 
-  return (
+    return (
       <div 
         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         onClick={closeModal}
@@ -144,7 +86,6 @@ export default function FireTVHome() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="relative">
-            {/* Close Button */}
             <Button
               variant="ghost"
               size="icon"
@@ -154,7 +95,6 @@ export default function FireTVHome() {
               <AlertCircle className="h-6 w-6 rotate-45" />
             </Button>
 
-            {/* Movie Backdrop */}
             <div className="relative h-48 bg-gray-800 rounded-t-xl overflow-hidden">
               <img
                 src={selectedMovie.backdropImage}
@@ -168,56 +108,40 @@ export default function FireTVHome() {
               <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent" />
             </div>
 
-            {/* Movie Details */}
             <div className="p-5 -mt-12 relative z-10">
               <div className="flex gap-4">
-                {/* Movie Poster */}
                 <div className="flex-shrink-0">
                   <img
                     src={selectedMovie.image}
                     alt={selectedMovie.title}
                     className="w-24 h-36 object-cover rounded-lg border-2 border-gray-700"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = `https://via.placeholder.com/200x300/374151/9CA3AF?text=${encodeURIComponent(selectedMovie.title)}`;
-                    }}
                   />
                 </div>
-
-                {/* Movie Info */}
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-white mb-2">{selectedMovie.title}</h2>
-                  
-                  <div className="flex items-center gap-3 mb-3">
-                    <Badge className="bg-orange-600 hover:bg-orange-700 text-xs">
-                      {selectedMovie.rating}
-                    </Badge>
-                    <span className="text-yellow-400 font-semibold text-sm">
-                      ★ {selectedMovie.voteAverage.toFixed(1)}/10
-                    </span>
-                  </div>
+                                     <div className="flex items-center gap-3 mb-3">
+                     <Badge className="bg-red-600 hover:bg-red-700 text-xs">
+                       {selectedMovie.rating}
+                     </Badge>
+                     <span className="text-yellow-400 font-semibold text-sm">
+                       ★ {selectedMovie.voteAverage.toFixed(1)}/10
+                     </span>
+                   </div>
 
-                  {/* All Genres */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {selectedMovie.genres.map((genre, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs bg-gray-700 text-gray-300 border border-gray-600">
-                        {genre}
-                      </Badge>
-                    ))}
-                  </div>
-
+                   {/* All Genres */}
+                   <div className="flex flex-wrap gap-2 mb-3">
+                     {selectedMovie.genres.map((genre, index) => (
+                       <Badge key={index} variant="secondary" className="text-xs bg-gray-700 text-gray-300 border border-gray-600">
+                         {genre}
+                       </Badge>
+                     ))}
+                   </div>
                   <p className="text-gray-300 text-xs mb-3">
-                    Released: {new Date(selectedMovie.releaseDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                    Released: {new Date(selectedMovie.releaseDate).toLocaleDateString()}
                   </p>
-
                   <p className="text-white leading-relaxed mb-4 text-sm line-clamp-4">
                     {selectedMovie.description}
                   </p>
-
                   <div className="flex gap-3">
                     <Button className="bg-white text-black hover:bg-gray-200 text-sm px-4 py-2">
                       <Play className="mr-2 h-3 w-3" />
@@ -237,7 +161,6 @@ export default function FireTVHome() {
     );
   };
 
-  // Movie Card Component
   const MovieCard = ({ movie }: { movie: Movie }) => (
     <Card 
       className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-all duration-300 hover:scale-105 cursor-pointer p-0"
@@ -273,45 +196,42 @@ export default function FireTVHome() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-black text-white">
-      {/* Fire TV Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 flex items-center justify-center p-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-lg">🔥</span>
+      {/* Profile Header */}
+      <header className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4">
+        <Link href="/">
+          <Button variant="ghost" className="text-white hover:bg-white/20">
+            <ArrowLeft className="h-6 w-6 mr-2" />
+            Back to Profiles
+          </Button>
+        </Link>
+        
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+            <span className="text-white font-bold text-sm">S</span>
           </div>
-          <h1 className="text-3xl font-bold text-white drop-shadow-lg">Fire Tv</h1>
-        </div>
-      </header>
-
-      {/* Profiles Section */}
-      {/* <div className="pt-24 pb-8 px-8">
-        <div className="flex items-center mb-8">
-          <Users className="h-8 w-8 text-orange-500 mr-3" />
-          <h2 className="text-3xl font-bold text-white">Who's Watching?</h2>
+          <span className="text-xl font-bold text-white drop-shadow-lg">Shaurya's Fire TV</span>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-          {profiles.map((profile) => (
-            <Link key={profile.name} href={profile.path}>
-              <div className="flex flex-col items-center group cursor-pointer">
-                <div className={`w-24 h-24 ${profile.color} rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 border-4 border-transparent group-hover:border-white/30`}>
-                  <span className="text-white font-bold text-3xl">{profile.initial}</span>
-                </div>
-                <h3 className="text-xl font-semibold text-white group-hover:text-orange-400 transition-colors">{profile.name}</h3>
-                <p className="text-sm text-gray-400 text-center mt-1">{profile.description}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div> */}
+        <div className="w-24"></div> {/* Spacer for centering */}
+      </header>
 
       {/* Hero Carousel Section */}
       <div className="relative h-[60vh] overflow-hidden">
         {loading ? (
-          <LoadingSpinner />
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center space-y-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-red-500" />
+              <p className="text-white/80">Loading your content...</p>
+            </div>
+          </div>
         ) : error ? (
-          <ErrorDisplay />
-        ) : heroContent.length > 0 ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <AlertCircle className="h-8 w-8 text-red-500" />
+              <p className="text-white/80 max-w-md">Failed to load content</p>
+            </div>
+          </div>
+        ) : shauryaHeroContent.length > 0 ? (
           <Carousel
             plugins={[plugin.current]}
             className="w-full h-full"
@@ -323,7 +243,7 @@ export default function FireTVHome() {
             }}
           >
             <CarouselContent className="h-full">
-              {heroContent.slice(0, 5).map((movie, index) => (
+              {shauryaHeroContent.map((movie, index) => (
                 <CarouselItem key={movie.id} className="h-full">
                   <div 
                     className="relative w-full size-150 bg-cover bg-center bg-no-repeat transition-all duration-500"
@@ -337,14 +257,14 @@ export default function FireTVHome() {
                     
                     <div className="relative z-10 flex items-center h-full p-4 md:p-6">
                       <div className="max-w-xl">
-                        <Badge className="mb-2 bg-orange-600 hover:bg-orange-700 text-xs">
+                        <Badge className="mb-2 bg-red-600 hover:bg-red-700 text-xs">
                           {movie.rating}
                         </Badge>
                         <h1 className="text-2xl md:text-3xl font-bold mb-2 text-white">
                           {movie.title}
                         </h1>
-                        <p className="text-sm mb-1 text-orange-400">
-                          Featured Content #{index + 1}
+                        <p className="text-sm mb-1 text-red-400">
+                          Horror & Sci-Fi #{index + 1}
                         </p>
                         <p className="text-white/80 mb-3 text-sm leading-relaxed line-clamp-2">
                           {movie.description}
@@ -372,13 +292,11 @@ export default function FireTVHome() {
               ))}
             </CarouselContent>
             
-            {/* Carousel Navigation */}
-            {/* <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 border-white/20 text-white hover:bg-black/70 h-8 w-8" />
-            <CarouselNext className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 border-white/20 text-white hover:bg-black/70 h-8 w-8" /> */}
+            <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 border-white/20 text-white hover:bg-black/70 h-8 w-8" />
+            <CarouselNext className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 border-white/20 text-white hover:bg-black/70 h-8 w-8" />
             
-            {/* Carousel Indicators */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-              {heroContent.slice(0, 5).map((_, index) => (
+              {shauryaHeroContent.map((_, index) => (
                 <div
                   key={index}
                   className="w-2 h-2 rounded-full bg-white/50 hover:bg-white/80 transition-colors cursor-pointer"
@@ -391,6 +309,55 @@ export default function FireTVHome() {
             <p className="text-white/80">No featured content available</p>
           </div>
         )}
+      </div>
+
+      {/* Original Hero Section (replaced) */}
+      <div className="relative h-[66vh] overflow-hidden" style={{display: 'none'}}>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center space-y-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-red-500" />
+              <p className="text-white/80">Loading your content...</p>
+            </div>
+          </div>
+        ) : heroContent.length > 0 ? (
+          <div 
+            className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+            style={{
+              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.3)), url('${heroContent[currentHeroIndex]?.image}')`
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+            
+            <div className="relative z-10 flex items-center h-full p-8">
+              <div className="max-w-2xl">
+                <Badge className="mb-4 bg-red-600 hover:bg-red-700">
+                  {heroContent[currentHeroIndex]?.rating}
+                </Badge>
+                <h1 className="text-5xl font-bold mb-4 text-white">
+                  {heroContent[currentHeroIndex]?.title}
+                </h1>
+                <p className="text-lg mb-2 text-red-400">
+                  Thrilling adventures for Shaurya
+                </p>
+                <p className="text-white/80 mb-6 text-lg leading-relaxed line-clamp-3">
+                  {heroContent[currentHeroIndex]?.description}
+                </p>
+                
+                <div className="flex space-x-4">
+                  <Button className="bg-white text-black hover:bg-gray-200 px-6 py-3 text-lg">
+                    <Play className="mr-2 h-5 w-5" />
+                    Watch Now
+                  </Button>
+                  <Button variant="outline" className="border-white text-white hover:bg-white/20 px-6 py-3 text-lg">
+                    <Info className="mr-2 h-5 w-5" />
+                    Learn More
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Navigation and Streaming Apps */}
@@ -424,65 +391,55 @@ export default function FireTVHome() {
         </div>
       </div>
 
-      {/* Trending Movies Section */}
-      {!loading && !error && trendingMovies.length > 0 && (
+      {/* Trending Horror & Sci-Fi */}
+      {!loading && !error && shauryaMovies(trendingMovies).length > 0 && (
         <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Trending Now</h2>
+          <h2 className="text-2xl font-bold mb-6 text-red-400">Trending Horror & Sci-Fi</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {trendingMovies.slice(0, 8).map((movie) => (
+            {shauryaMovies(trendingMovies).slice(0, 8).map((movie) => (
               <MovieCard key={movie.id} movie={movie} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Popular Movies Section */}
+      {/* Popular Thrillers */}
       {!loading && !error && popularMovies.length > 0 && (
         <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Popular Movies</h2>
+          <h2 className="text-2xl font-bold mb-6">Popular Thrillers</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {popularMovies.slice(0, 8).map((movie) => (
+            {shauryaMovies(popularMovies).slice(0, 8).map((movie) => (
               <MovieCard key={movie.id} movie={movie} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Top Rated Movies Section */}
+      {/* Top Rated Fantasy */}
       {!loading && !error && topRatedMovies.length > 0 && (
         <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Top Rated</h2>
+          <h2 className="text-2xl font-bold mb-6">Top Rated Fantasy</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {topRatedMovies.slice(0, 8).map((movie) => (
+            {shauryaMovies(topRatedMovies).slice(0, 8).map((movie) => (
               <MovieCard key={movie.id} movie={movie} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Now Playing Movies */}
+      {/* Supernatural Adventures */}
       {!loading && !error && nowPlayingMovies.length > 0 && (
         <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Now Playing</h2>
+          <h2 className="text-2xl font-bold mb-6">Supernatural Adventures</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {nowPlayingMovies.slice(0, 4).map((movie) => (
+            {shauryaMovies(nowPlayingMovies).slice(0, 8).map((movie) => (
               <MovieCard key={movie.id} movie={movie} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Footer with API Status */}
-      <div className="px-8 py-4 text-center text-sm text-gray-400">
-        <p>
-          {loading ? 'Loading content...' : 
-           error ? 'Content unavailable - Check API configuration' : 
-           'Powered by TMDB API'}
-        </p>
-      </div>
-
-      {/* Movie Details Modal */}
       <MovieModal />
     </div>
   );
-}
+} 
