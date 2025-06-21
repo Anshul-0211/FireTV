@@ -1,4 +1,4 @@
-import { TMDBMovie, TMDBGenre, Movie, HeroContent, WatchedMovie } from '@/types/movie';
+import { TMDBMovie, TMDBMovieDetails, TMDBGenre, Movie, HeroContent, WatchedMovie } from '@/types/movie';
 import { tmdbService } from '@/services/tmdb.service';
 import { MOOD_CONFIG } from '@/types/mood';
 
@@ -25,7 +25,7 @@ export const GENRE_MAP: Record<number, string> = {
   37: 'Western'
 };
 
-// Transform TMDB movie to internal Movie format
+// Transform TMDB movie to internal Movie format (for list responses)
 export const transformTMDBToMovie = (tmdbMovie: TMDBMovie): Movie => {
   const primaryGenre = tmdbMovie.genre_ids[0] ? GENRE_MAP[tmdbMovie.genre_ids[0]] || 'Unknown' : 'Unknown';
   const allGenres = tmdbMovie.genre_ids.map(id => GENRE_MAP[id]).filter(Boolean);
@@ -43,6 +43,27 @@ export const transformTMDBToMovie = (tmdbMovie: TMDBMovie): Movie => {
     releaseDate: tmdbMovie.release_date,
     voteAverage: tmdbMovie.vote_average,
     isAdult: tmdbMovie.adult
+  };
+};
+
+// Transform TMDB movie details to internal Movie format (for details responses)
+export const transformTMDBDetailsToMovie = (tmdbMovie: TMDBMovieDetails): Movie => {
+  const primaryGenre = tmdbMovie.genres && tmdbMovie.genres[0] ? tmdbMovie.genres[0].name : 'Unknown';
+  const allGenres = tmdbMovie.genres ? tmdbMovie.genres.map(genre => genre.name) : [];
+  
+  return {
+    id: tmdbMovie.id,
+    tmdbId: tmdbMovie.id, // Store TMDB ID for tracking
+    title: tmdbMovie.title,
+    description: tmdbMovie.overview || 'No description available',
+    image: tmdbService.getPosterURL(tmdbMovie.poster_path),
+    backdropImage: tmdbService.getBackdropURL(tmdbMovie.backdrop_path),
+    rating: getRatingFromVoteAverage(tmdbMovie.vote_average),
+    genre: primaryGenre,
+    genres: allGenres.length > 0 ? allGenres : ['Unknown'],
+    releaseDate: tmdbMovie.release_date || '',
+    voteAverage: tmdbMovie.vote_average || 0,
+    isAdult: tmdbMovie.adult || false
   };
 };
 
@@ -141,14 +162,13 @@ export const prepareRecommendationRequest = (userId?: string, preferences?: any)
   };
 };
 
-// Convert WatchedMovie back to Movie format for display
+// Convert WatchedMovie back to Movie format for display (with placeholder data)
 export const createWatchedMovieDisplay = (watchedMovie: WatchedMovie): Partial<Movie> => {
   return {
     id: watchedMovie.movieId,
     tmdbId: watchedMovie.tmdbId,
     title: watchedMovie.title,
-    // Since we don't store full movie data, we'll use placeholders
-    // In a real app, you'd fetch full movie data from TMDB using tmdbId
+    // Placeholder data - use createWatchedMovieDisplayWithTMDB for full details
     description: 'Movie you\'ve watched',
     image: `https://via.placeholder.com/300x450/374151/9CA3AF?text=${encodeURIComponent(watchedMovie.title)}`,
     backdropImage: `https://via.placeholder.com/600x400/374151/9CA3AF?text=${encodeURIComponent(watchedMovie.title)}`,
@@ -159,6 +179,28 @@ export const createWatchedMovieDisplay = (watchedMovie: WatchedMovie): Partial<M
     voteAverage: 7.0,
     isAdult: false
   };
+};
+
+// Fetch full movie details from TMDB for watched movies
+export const createWatchedMovieDisplayWithTMDB = async (watchedMovie: WatchedMovie): Promise<Movie> => {
+  try {
+    // Fetch full movie details from TMDB using the stored tmdbId
+    const tmdbMovie = await tmdbService.getMovieDetails(watchedMovie.tmdbId);
+    
+    // Transform TMDB details data to our Movie format (using the details transformer)
+    const fullMovie = transformTMDBDetailsToMovie(tmdbMovie);
+    
+    // Override with watched movie specific data
+    return {
+      ...fullMovie,
+      id: watchedMovie.movieId, // Keep our internal movie ID
+      // Preserve the original TMDB data but can add watched-specific overrides here if needed
+    };
+  } catch (error) {
+    console.error('Error fetching TMDB details for watched movie:', error);
+    // Fallback to placeholder data if TMDB fetch fails
+    return createWatchedMovieDisplay(watchedMovie) as Movie;
+  }
 };
 
 // Get rating display for watched movies

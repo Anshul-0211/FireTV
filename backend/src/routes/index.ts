@@ -2,6 +2,7 @@ import { Router } from 'express';
 import userRoutes from './userRoutes';
 import moodRoutes from './moodRoutes';
 import watchedMovieRoutes from './watchedMovieRoutes';
+import recommendationRoutes from './recommendationRoutes';
 
 const router = Router();
 
@@ -9,6 +10,7 @@ const router = Router();
 router.use('/users', userRoutes);
 router.use('/moods', moodRoutes);
 router.use('/watched-movies', watchedMovieRoutes);
+router.use('/recommendations', recommendationRoutes);
 
 // Health check endpoint
 router.get('/health', (_req, res) => {
@@ -30,6 +32,7 @@ router.get('/', (_req, res) => {
       users: '/api/users',
       moods: '/api/moods',
       watchedMovies: '/api/watched-movies',
+      recommendations: '/api/recommendations',
       health: '/api/health'
     },
     documentation: 'See README.md for API documentation'

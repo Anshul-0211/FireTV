@@ -32,6 +32,31 @@ export interface TMDBGenresResponse {
   genres: TMDBGenre[];
 }
 
+// TMDB Movie Details Response (different from list response)
+export interface TMDBMovieDetails {
+  id: number;
+  title: string;
+  original_title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string;
+  genres: TMDBGenre[]; // Different from TMDBMovie which has genre_ids
+  adult: boolean;
+  vote_average: number;
+  vote_count: number;
+  popularity: number;
+  video: boolean;
+  original_language: string;
+  runtime?: number;
+  budget?: number;
+  revenue?: number;
+  homepage?: string;
+  imdb_id?: string;
+  status?: string;
+  tagline?: string;
+}
+
 // Internal App Types (normalized)
 export interface Movie {
   id: number;

@@ -1,8 +1,15 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WatchedMovieController = void 0;
 const WatchedMovie_1 = require("../models/WatchedMovie");
 const types_1 = require("../types");
+const User_1 = require("../models/User");
+const child_process_1 = require("child_process");
+const path_1 = __importDefault(require("path"));
+const process_1 = __importDefault(require("process"));
 class WatchedMovieController {
     // GET /api/watched-movies/user/:userId - Get watched movies for a user
     static async getUserWatchedMovies(req, res) {
@@ -115,6 +122,8 @@ class WatchedMovieController {
                 });
                 return;
             }
+            // Trigger recommendation refresh for the user
+            WatchedMovieController.triggerRecommendationRefresh(userId, watchedData.tmdb_id);
             res.status(201).json({
                 success: true,
                 data: result.data,
@@ -380,6 +389,44 @@ class WatchedMovieController {
                 success: false,
                 error: 'Internal server error'
             });
+        }
+    }
+    // Helper method to trigger recommendation refresh
+    static async triggerRecommendationRefresh(userId, tmdbId) {
+        try {
+            // Get username from user ID
+            const userResult = await User_1.UserModel.getUserById(userId);
+            if (!userResult.success || !userResult.data) {
+                console.error('User not found for recommendation refresh');
+                return;
+            }
+            const username = userResult.data.username;
+            // Validate username against known profiles
+            const validProfiles = ['anshul', 'shikhar', 'priyanshu', 'shaurya'];
+            if (!validProfiles.includes(username)) {
+                console.log(`Skipping recommendation refresh for non-profile user: ${username}`);
+                return;
+            }
+            console.log(`🎬 User ${username} watched movie ${tmdbId}, triggering recommendation refresh`);
+            // Call Python recommendation service asynchronously (using fixed version)
+            const pythonScriptPath = path_1.default.join(__dirname, '../../../src4/firetv_integration_fixed.py');
+            const pythonCommand = process_1.default.platform === 'win32' ? 'python' : 'python3';
+            const pythonProcess = (0, child_process_1.spawn)(pythonCommand, [pythonScriptPath, 'refresh', username]);
+            // Handle process completion (non-blocking)
+            pythonProcess.on('close', (code) => {
+                if (code === 0) {
+                    console.log(`✅ Recommendations refreshed for ${username} after watching ${tmdbId}`);
+                }
+                else {
+                    console.error(`❌ Failed to refresh recommendations for ${username}`);
+                }
+            });
+            pythonProcess.on('error', (error) => {
+                console.error(`Error spawning recommendation process: ${error.message}`);
+            });
+        }
+        catch (error) {
+            console.error('Error triggering recommendation refresh:', error);
         }
     }
 }

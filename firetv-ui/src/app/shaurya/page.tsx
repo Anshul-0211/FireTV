@@ -29,10 +29,12 @@ import {
 } from "@/components/ui/carousel"
 import Autoplay from "embla-carousel-autoplay"
 import { useMovieData } from '@/hooks/useMovieData';
+import { useRecommendations } from '@/hooks/useRecommendations';
 import { Movie, MovieRating } from '@/types/movie';
 import { useWatchedMovie } from '@/hooks/useWatchedMovie';
-import { useWatchedMovies } from '@/hooks/useWatchedMovies';
+import { useWatchedMovies, WatchedMovieWithDetails } from '@/hooks/useWatchedMovies';
 import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/utils/movie.utils';
+import { WatchedMovieCard } from '@/components/WatchedMovieCard';
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
 import Link from 'next/link';
@@ -46,17 +48,22 @@ export default function ShauryaProfile() {
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
-  // Shaurya's preferences - Horror, Sci-Fi, Fantasy
+  // Fetch personalized recommendations for Shaurya
+  const { 
+    recommendations: personalizedMovies,
+    loading: recommendationsLoading, 
+    error: recommendationsError,
+    refetch: refetchRecommendations,
+    refresh: refreshRecommendations
+  } = useRecommendations('shaurya');
+
+  // Fetch general movie data for hero content and streaming apps
   const { 
     heroContent, 
-    trendingMovies, 
-    popularMovies, 
-    topRatedMovies,
-    nowPlayingMovies,
     streamingApps, 
-    loading, 
-    error, 
-    refetch 
+    loading: generalLoading, 
+    error: generalError, 
+    refetch: refetchGeneral 
   } = useMovieData(false);
 
   // Fetch watched movies for Shaurya
@@ -74,6 +81,20 @@ export default function ShauryaProfile() {
     hideMoodSelector
   } = useMoodSelector('shaurya', 'shaurya');
 
+  // Combined loading and error states
+  const loading = recommendationsLoading || generalLoading;
+  const error = recommendationsError || generalError;
+
+  // Debug: Log movie count for Shaurya
+  if (personalizedMovies.length > 0) {
+    console.log('🎬 Shaurya has', personalizedMovies.length, 'personalized movies');
+  }
+
+  // Refetch function that refreshes both recommendations and general data
+  const refetch = async () => {
+    await Promise.all([refetchRecommendations(), refetchGeneral()]);
+  };
+
   // Filter hero content for Shaurya's preferences
   const shauryaHeroContent = heroContent.filter(movie => 
     movie.genre && ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller', 'Adventure'].includes(movie.genre)
@@ -88,12 +109,6 @@ export default function ShauryaProfile() {
     setIsModalOpen(false);
     setSelectedMovie(null);
   };
-
-  // Filter movies for Shaurya's preferences (Horror, Sci-Fi, Fantasy)
-  const shauryaMovies = (movies: Movie[]) => 
-    movies.filter(movie => 
-      ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller', 'Adventure'].includes(movie.genre)
-    );
 
   // Movie Details Modal Component with Watched functionality
   const MovieModal = () => {
@@ -291,7 +306,14 @@ export default function ShauryaProfile() {
             className="w-full h-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = `https://via.placeholder.com/300x450/374151/9CA3AF?text=${encodeURIComponent(movie.title)}`;
+              target.src = `data:image/svg+xml;base64,${btoa(`
+                <svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100%" height="100%" fill="#374151"/>
+                  <text x="50%" y="50%" font-family="Arial" font-size="16" fill="#9CA3AF" text-anchor="middle" dominant-baseline="middle">
+                    ${movie.title}
+                  </text>
+                </svg>
+              `)}`;
             }}
           />
         </div>
@@ -311,47 +333,7 @@ export default function ShauryaProfile() {
     </Card>
   );
 
-  // Watched Movie Card Component
-  const WatchedMovieCard = ({ watchedMovie }: { watchedMovie: any }) => {
-    const ratingDisplay = getRatingDisplay(watchedMovie.rating);
-    const movieDisplay = createWatchedMovieDisplay(watchedMovie);
-    
-    return (
-      <Card 
-        className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-all duration-300 hover:scale-105 cursor-pointer p-0 relative"
-        onClick={() => handleMovieClick(movieDisplay as Movie)}
-      >
-        <CardContent className="p-0">
-          <div className="aspect-[2/3] bg-gray-700 rounded-t-lg mb-3 overflow-hidden relative">
-            <img 
-              src={movieDisplay.image} 
-              alt={movieDisplay.title}
-              className="w-full h-full object-cover"
-            />
-            {/* Watched Badge */}
-            <div className="absolute top-2 right-2 bg-green-600 rounded-full p-1">
-              <Check className="h-3 w-3 text-white" />
-            </div>
-          </div>
-          <div className="px-3 pb-3">
-            <h3 className="text-sm font-medium text-white mb-1 line-clamp-2">{movieDisplay.title}</h3>
-            <div className="flex items-center justify-between mb-1">
-              <Badge variant="secondary" className="text-xs bg-green-700 text-green-300">
-                Watched
-              </Badge>
-              <span className={`text-xs ${ratingDisplay.color}`}>{ratingDisplay.icon}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">
-                {new Date(watchedMovie.watchedAt).toLocaleDateString()}
-              </span>
-              <span className={`text-xs ${ratingDisplay.color}`}>{ratingDisplay.text}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  // Use the reusable WatchedMovieCard component
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-black text-white">
@@ -550,50 +532,59 @@ export default function ShauryaProfile() {
         </div>
       </div>
 
-      {/* Trending Horror & Sci-Fi */}
-      {!loading && !error && shauryaMovies(trendingMovies).length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6 text-red-400">Trending Horror & Sci-Fi</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shauryaMovies(trendingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
+      {/* Personal Recommendations Sections */}
+      {!loading && !error && personalizedMovies.length > 0 && (
+        <>
+          {/* Your Personal Picks */}
+          <div className="px-8 py-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-red-400 flex items-center">
+                🎯 Your Personal Picks
+              </h2>
+              <Badge variant="secondary" className="bg-red-600 text-red-100">
+                {personalizedMovies.length} total movies
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+              {personalizedMovies.slice(0, 8).map((movie) => (
+                <MovieCard key={movie.id} movie={movie} />
+              ))}
+            </div>
           </div>
-        </div>
+
+          {/* More Horror & Sci-Fi */}
+          {personalizedMovies.length > 8 && (
+            <div className="px-8 py-6">
+              <h2 className="text-2xl font-bold mb-6">🌟 More Horror & Sci-Fi</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                {personalizedMovies.slice(8, 16).map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fresh Recommendations */}
+          {personalizedMovies.length > 16 && (
+            <div className="px-8 py-6">
+              <h2 className="text-2xl font-bold mb-6">🔥 Fresh Recommendations</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                {personalizedMovies.slice(16).map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Popular Thrillers */}
-      {!loading && !error && popularMovies.length > 0 && (
+      {/* No Recommendations State */}
+      {!loading && !error && personalizedMovies.length === 0 && (
         <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Popular Thrillers</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shauryaMovies(popularMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top Rated Fantasy */}
-      {!loading && !error && topRatedMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Top Rated Fantasy</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shauryaMovies(topRatedMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Supernatural Adventures */}
-      {!loading && !error && nowPlayingMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Supernatural Adventures</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shauryaMovies(nowPlayingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
+          <div className="text-center text-gray-400">
+            <RefreshCw className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">Building your recommendations...</h3>
+            <p className="text-sm">Watch some movies to get personalized suggestions!</p>
           </div>
         </div>
       )}
@@ -612,7 +603,11 @@ export default function ShauryaProfile() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {watchedMovies.map((watchedMovie) => (
-              <WatchedMovieCard key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} watchedMovie={watchedMovie} />
+              <WatchedMovieCard 
+              key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} 
+              watchedMovie={watchedMovie} 
+              onMovieClick={handleMovieClick}
+            />
             ))}
           </div>
         </div>

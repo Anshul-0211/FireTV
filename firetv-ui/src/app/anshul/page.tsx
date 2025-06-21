@@ -29,9 +29,10 @@ import {
 } from "@/components/ui/carousel"
 import Autoplay from "embla-carousel-autoplay"
 import { useMovieData } from '@/hooks/useMovieData';
+import { useRecommendations } from '@/hooks/useRecommendations';
 import { Movie, MovieRating } from '@/types/movie';
 import { useWatchedMovie } from '@/hooks/useWatchedMovie';
-import { useWatchedMovies } from '@/hooks/useWatchedMovies';
+import { useWatchedMovies, WatchedMovieWithDetails } from '@/hooks/useWatchedMovies';
 import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/utils/movie.utils';
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
@@ -46,17 +47,22 @@ export default function AnshulProfile() {
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
-  // Anshul's preferences - Action, Thriller, Sci-Fi
+  // Fetch personalized recommendations for Anshul
+  const { 
+    recommendations: personalizedMovies,
+    loading: recommendationsLoading, 
+    error: recommendationsError,
+    refetch: refetchRecommendations,
+    refresh: refreshRecommendations
+  } = useRecommendations('anshul');
+
+  // Fetch general movie data for hero content and streaming apps
   const { 
     heroContent, 
-    trendingMovies, 
-    popularMovies, 
-    topRatedMovies,
-    nowPlayingMovies,
     streamingApps, 
-    loading, 
-    error, 
-    refetch 
+    loading: generalLoading, 
+    error: generalError, 
+    refetch: refetchGeneral 
   } = useMovieData(false);
 
   // Fetch watched movies for Anshul
@@ -74,6 +80,26 @@ export default function AnshulProfile() {
     hideMoodSelector
   } = useMoodSelector('anshul', 'anshul');
 
+  // Combined loading and error states
+  const loading = recommendationsLoading || generalLoading;
+  const error = recommendationsError || generalError;
+
+  // Use personalized recommendations as the main content
+  const trendingMovies = personalizedMovies;
+  const popularMovies = personalizedMovies;
+  const topRatedMovies = personalizedMovies;
+  const nowPlayingMovies = personalizedMovies;
+
+  // Debug: Log the first converted movie to verify data structure
+  if (personalizedMovies.length > 0) {
+    console.log('🎬 Sample converted movie for Anshul:', personalizedMovies[0]);
+  }
+
+  // Refetch function that refreshes both recommendations and general data
+  const refetch = async () => {
+    await Promise.all([refetchRecommendations(), refetchGeneral()]);
+  };
+
   // Filter hero content for Anshul's preferences
   const anshulHeroContent = heroContent.filter(movie => 
     movie.genre && ['Action', 'Thriller', 'Sci-Fi', 'Adventure'].includes(movie.genre)
@@ -88,12 +114,6 @@ export default function AnshulProfile() {
     setIsModalOpen(false);
     setSelectedMovie(null);
   };
-
-  // Filter movies for Anshul's preferences (Action, Thriller, Sci-Fi)
-  const anshulMovies = (movies: Movie[]) => 
-    movies.filter(movie => 
-      ['Action', 'Thriller', 'Sci-Fi', 'Adventure'].includes(movie.genre)
-    );
 
   // Movie Details Modal Component with Watched functionality
   const MovieModal = () => {
@@ -291,7 +311,14 @@ export default function AnshulProfile() {
             className="w-full h-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = `https://via.placeholder.com/300x450/374151/9CA3AF?text=${encodeURIComponent(movie.title)}`;
+              target.src = `data:image/svg+xml;base64,${btoa(`
+                <svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100%" height="100%" fill="#374151"/>
+                  <text x="50%" y="50%" font-family="Arial" font-size="16" fill="#9CA3AF" text-anchor="middle" dominant-baseline="middle">
+                    ${movie.title}
+                  </text>
+                </svg>
+              `)}`;
             }}
           />
         </div>
@@ -312,10 +339,12 @@ export default function AnshulProfile() {
   );
 
   // Watched Movie Card Component
-  const WatchedMovieCard = ({ watchedMovie }: { watchedMovie: any }) => {
+  const WatchedMovieCard = ({ watchedMovie }: { watchedMovie: WatchedMovieWithDetails }) => {
     const ratingDisplay = getRatingDisplay(watchedMovie.rating);
     const moodDisplay = getMoodDisplay(watchedMovie.current_Mood);
-    const movieDisplay = createWatchedMovieDisplay(watchedMovie);
+    
+    // Use full TMDB data if available, otherwise fallback to placeholder
+    const movieDisplay = watchedMovie.fullMovieData || createWatchedMovieDisplay(watchedMovie);
     
     return (
       <Card 
@@ -516,50 +545,59 @@ export default function AnshulProfile() {
         </div>
       </div>
 
-      {/* Trending Action & Thriller */}
-      {!loading && !error && anshulMovies(trendingMovies).length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6 text-blue-400">Trending Action & Thriller</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {anshulMovies(trendingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
+      {/* Personal Recommendations Sections */}
+      {!loading && !error && personalizedMovies.length > 0 && (
+        <>
+          {/* Your Personal Picks */}
+          <div className="px-8 py-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-blue-400 flex items-center">
+                🎯 Your Personal Picks
+              </h2>
+              <Badge variant="secondary" className="bg-blue-600 text-blue-100">
+                {personalizedMovies.length} total movies
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+              {personalizedMovies.slice(0, 8).map((movie) => (
+                <MovieCard key={movie.id} movie={movie} />
+              ))}
+            </div>
           </div>
-        </div>
+
+          {/* More Action & Thriller */}
+          {personalizedMovies.length > 8 && (
+            <div className="px-8 py-6">
+              <h2 className="text-2xl font-bold mb-6">🌟 More Action & Thriller</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                {personalizedMovies.slice(8, 16).map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fresh Recommendations */}
+          {personalizedMovies.length > 16 && (
+            <div className="px-8 py-6">
+              <h2 className="text-2xl font-bold mb-6">🔥 Fresh Recommendations</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                {personalizedMovies.slice(16).map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Popular Action Movies */}
-      {!loading && !error && popularMovies.length > 0 && (
+      {/* No Recommendations State */}
+      {!loading && !error && personalizedMovies.length === 0 && (
         <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Popular Action Movies</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {anshulMovies(popularMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top Rated Adventures */}
-      {!loading && !error && topRatedMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Top Rated Adventures</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {anshulMovies(topRatedMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Continue Watching */}
-      {!loading && !error && nowPlayingMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Continue Watching</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {anshulMovies(nowPlayingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
+          <div className="text-center text-gray-400">
+            <RefreshCw className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">Building your recommendations...</h3>
+            <p className="text-sm">Watch some movies to get personalized suggestions!</p>
           </div>
         </div>
       )}

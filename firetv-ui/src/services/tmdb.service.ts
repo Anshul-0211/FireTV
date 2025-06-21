@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 import { 
   TMDBMovie, 
+  TMDBMovieDetails,
   TMDBResponse, 
   TMDBGenresResponse, 
   Movie,
@@ -155,6 +156,17 @@ class TMDBService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
+    }
+  }
+
+  // Get movie details by ID
+  async getMovieDetails(movieId: number): Promise<TMDBMovieDetails> {
+    try {
+      const data = await this.makeRequest<TMDBMovieDetails>(TMDB_ENDPOINTS.MOVIE_DETAILS(movieId));
+      return data;
+    } catch (error) {
+      console.error(`Error fetching movie details for ID ${movieId}:`, error);
+      throw error;
     }
   }
 

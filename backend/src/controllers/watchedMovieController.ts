@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 import { WatchedMovieModel } from '../models/WatchedMovie';
 import { CreateWatchedMovieRequest, UpdateWatchedMovieRequest, ApiResponse, MovieRating, MoodType } from '../types';
+import { UserModel } from '../models/User';
+import { spawn } from 'child_process';
+import path from 'path';
+import process from 'process';
 
 export class WatchedMovieController {
   
@@ -131,6 +135,9 @@ export class WatchedMovieController {
         } as ApiResponse<null>);
         return;
       }
+      
+      // Trigger recommendation refresh for the user
+      WatchedMovieController.triggerRecommendationAction(userId, watchedData.tmdb_id, watchedData.rating);
       
       res.status(201).json({
         success: true,
@@ -433,6 +440,83 @@ export class WatchedMovieController {
         success: false,
         error: 'Internal server error'
       } as ApiResponse<null>);
+    }
+  }
+  
+  // Helper method to trigger recommendation actions based on user behavior
+  private static async triggerRecommendationAction(userId: number, tmdbId: number, rating: MovieRating): Promise<void> {
+    try {
+      // Get username from user ID
+      const userResult = await UserModel.getUserById(userId);
+      
+      if (!userResult.success || !userResult.data) {
+        console.error('User not found for recommendation action');
+        return;
+      }
+      
+      const username = userResult.data.username;
+      
+      // Validate username against known profiles
+      const validProfiles = ['anshul', 'shikhar', 'priyanshu', 'shaurya'];
+      if (!validProfiles.includes(username)) {
+        console.log(`Skipping recommendation action for non-profile user: ${username}`);
+        return;
+      }
+      
+      // Use appropriate python command
+      let pythonCommand: string;
+      if (process.platform === 'win32') {
+        pythonCommand = 'python';
+      } else {
+        pythonCommand = 'python3';
+      }
+      
+      const pythonScriptPath = path.join(__dirname, '../../../src4/firetv_integration_fixed.py');
+      
+      // Handle different actions based on rating
+      if (rating === MovieRating.DISLIKED) {
+        // Handle dislike - remove movie and reduce similar recommendations
+        console.log(`🎬 User ${username} disliked movie ${tmdbId}, processing dislike`);
+        
+        const pythonProcess = spawn(pythonCommand, [pythonScriptPath, 'dislike', username, tmdbId.toString()], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            console.log(`✅ Processed dislike for movie ${tmdbId} in ${username}'s profile`);
+          } else {
+            console.error(`❌ Failed to process dislike for ${username} (exit code: ${code})`);
+          }
+        });
+        
+        pythonProcess.on('error', (error) => {
+          console.error(`Error spawning dislike process: ${error.message}`);
+        });
+        
+      } else {
+        // Handle like/love - add 5 new incremental recommendations
+        console.log(`🎬 User ${username} watched movie ${tmdbId} (rating: ${rating}), adding new recommendations`);
+        
+        const pythonProcess = spawn(pythonCommand, [pythonScriptPath, 'add', username, '5'], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+        
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            console.log(`✅ Added 5 new recommendations for ${username} after watching ${tmdbId}`);
+          } else {
+            console.error(`❌ Failed to add recommendations for ${username} (exit code: ${code})`);
+          }
+        });
+        
+        pythonProcess.on('error', (error) => {
+          console.error(`Error spawning incremental recommendation process: ${error.message}`);
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error triggering recommendation action:', error);
     }
   }
 } 

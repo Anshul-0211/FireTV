@@ -269,18 +269,18 @@ export const SpeakerRecognition: React.FC<SpeakerRecognitionProps> = ({
     };
   }, [cleanupAudio, resetTimer]);
 
-     const getConfidenceColor = (confidence: number) => {
+  const getConfidenceColor = (confidence: number) => {
      if (confidence >= 0.7) return 'text-green-400';
      if (confidence >= 0.5) return 'text-yellow-400';
      return 'text-red-400';
-   };
+  };
 
-   const getConfidenceText = (confidence: number) => {
+  const getConfidenceText = (confidence: number) => {
      if (confidence >= 0.7) return 'Excellent';
      if (confidence >= 0.5) return 'Good';
      if (confidence >= 0.3) return 'Fair';
-     return 'Low';
-   };
+    return 'Low';
+  };
 
   // Redirecting loading screen
   if (isRedirecting) {
@@ -314,7 +314,7 @@ export const SpeakerRecognition: React.FC<SpeakerRecognitionProps> = ({
           </div>
           <h2 className="text-2xl font-bold text-white">
             Voice Recognition
-          </h2>
+      </h2>
         </div>
         {onClose && (
           <button
@@ -378,11 +378,11 @@ export const SpeakerRecognition: React.FC<SpeakerRecognitionProps> = ({
                   }`}>
                     <User className="w-4 h-4 text-white" />
                   </div>
-                  <div>
+                <div>
                     <span className="font-medium text-white">{profile.name}</span>
                     <span className="text-sm text-gray-400 ml-3">
-                      {profile.createdAt.toLocaleDateString()}
-                    </span>
+                    {profile.createdAt.toLocaleDateString()}
+                  </span>
                     {validProfiles.includes(profile.name.toLowerCase()) && (
                       <span className="ml-2 text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded">
                         Profile Available

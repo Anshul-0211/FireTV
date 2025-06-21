@@ -137,7 +137,7 @@ export default function FireTVHome() {
                 onSpeakerIdentified={handleSpeakerIdentified}
                 onError={handleError}
                 onClose={closeModal}
-              />
+          />
             )}
           </div>
         </div>

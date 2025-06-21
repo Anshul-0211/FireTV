@@ -10,5 +10,6 @@ export declare class WatchedMovieController {
     static getMoviesByMood(req: Request, res: Response): Promise<void>;
     static getAllWatchedMoviesWithUsers(req: Request, res: Response): Promise<void>;
     static getRecentlyWatchedMovies(req: Request, res: Response): Promise<void>;
+    private static triggerRecommendationRefresh;
 }
 //# sourceMappingURL=watchedMovieController.d.ts.map

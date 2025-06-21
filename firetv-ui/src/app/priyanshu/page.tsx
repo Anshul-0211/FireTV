@@ -29,10 +29,12 @@ import {
 } from "@/components/ui/carousel"
 import Autoplay from "embla-carousel-autoplay"
 import { useMovieData } from '@/hooks/useMovieData';
+import { useRecommendations } from '@/hooks/useRecommendations';
 import { Movie, MovieRating } from '@/types/movie';
 import { useWatchedMovie } from '@/hooks/useWatchedMovie';
-import { useWatchedMovies } from '@/hooks/useWatchedMovies';
+import { useWatchedMovies, WatchedMovieWithDetails } from '@/hooks/useWatchedMovies';
 import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/utils/movie.utils';
+
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
 import Link from 'next/link';
@@ -46,17 +48,22 @@ export default function PriyanshuProfile() {
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
-  // Priyanshu's preferences - Drama, Romance, Mystery
+  // Fetch personalized recommendations for Priyanshu
+  const { 
+    recommendations: personalizedMovies,
+    loading: recommendationsLoading, 
+    error: recommendationsError,
+    refetch: refetchRecommendations,
+    refresh: refreshRecommendations
+  } = useRecommendations('priyanshu');
+
+  // Fetch general movie data for hero content and streaming apps
   const { 
     heroContent, 
-    trendingMovies, 
-    popularMovies, 
-    topRatedMovies,
-    nowPlayingMovies,
     streamingApps, 
-    loading, 
-    error, 
-    refetch 
+    loading: generalLoading, 
+    error: generalError, 
+    refetch: refetchGeneral 
   } = useMovieData(false);
 
   // Fetch watched movies for Priyanshu
@@ -74,6 +81,20 @@ export default function PriyanshuProfile() {
     hideMoodSelector
   } = useMoodSelector('priyanshu', 'priyanshu');
 
+  // Combined loading and error states
+  const loading = recommendationsLoading || generalLoading;
+  const error = recommendationsError || generalError;
+
+  // Debug: Log movie count for Priyanshu
+  if (personalizedMovies.length > 0) {
+    console.log('🎬 Priyanshu has', personalizedMovies.length, 'personalized movies');
+  }
+
+  // Refetch function that refreshes both recommendations and general data
+  const refetch = async () => {
+    await Promise.all([refetchRecommendations(), refetchGeneral()]);
+  };
+
   // Filter hero content for Priyanshu's preferences
   const priyanshuHeroContent = heroContent.filter(movie => 
     movie.genre && ['Drama', 'Romance', 'Mystery', 'Crime', 'Biography'].includes(movie.genre)
@@ -88,12 +109,6 @@ export default function PriyanshuProfile() {
     setIsModalOpen(false);
     setSelectedMovie(null);
   };
-
-  // Filter movies for Priyanshu's preferences (Drama, Romance, Mystery)
-  const priyanshuMovies = (movies: Movie[]) => 
-    movies.filter(movie => 
-      ['Drama', 'Romance', 'Mystery', 'Crime', 'Biography'].includes(movie.genre)
-    );
 
   // Movie Details Modal Component with Watched functionality
   const MovieModal = () => {
@@ -233,23 +248,23 @@ export default function PriyanshuProfile() {
                 </div>
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-white mb-2">{selectedMovie.title}</h2>
-                                     <div className="flex items-center gap-3 mb-3">
-                     <Badge className="bg-purple-600 hover:bg-purple-700 text-xs">
-                       {selectedMovie.rating}
-                     </Badge>
-                     <span className="text-yellow-400 font-semibold text-sm">
-                       ★ {selectedMovie.voteAverage.toFixed(1)}/10
-                     </span>
-                   </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <Badge className="bg-purple-600 hover:bg-purple-700 text-xs">
+                      {selectedMovie.rating}
+                    </Badge>
+                    <span className="text-yellow-400 font-semibold text-sm">
+                      ★ {selectedMovie.voteAverage.toFixed(1)}/10
+                    </span>
+                  </div>
 
-                   {/* All Genres */}
-                   <div className="flex flex-wrap gap-2 mb-3">
-                     {selectedMovie.genres.map((genre, index) => (
-                       <Badge key={index} variant="secondary" className="text-xs bg-gray-700 text-gray-300 border border-gray-600">
-                         {genre}
-                       </Badge>
-                     ))}
-                   </div>
+                  {/* All Genres */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedMovie.genres.map((genre, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs bg-gray-700 text-gray-300 border border-gray-600">
+                        {genre}
+                      </Badge>
+                    ))}
+                  </div>
                   <p className="text-gray-300 text-xs mb-3">
                     Released: {new Date(selectedMovie.releaseDate).toLocaleDateString()}
                   </p>
@@ -291,7 +306,14 @@ export default function PriyanshuProfile() {
             className="w-full h-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = `https://via.placeholder.com/300x450/374151/9CA3AF?text=${encodeURIComponent(movie.title)}`;
+              target.src = `data:image/svg+xml;base64,${btoa(`
+                <svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100%" height="100%" fill="#374151"/>
+                  <text x="50%" y="50%" font-family="Arial" font-size="16" fill="#9CA3AF" text-anchor="middle" dominant-baseline="middle">
+                    ${movie.title}
+                  </text>
+                </svg>
+              `)}`;
             }}
           />
         </div>
@@ -312,9 +334,12 @@ export default function PriyanshuProfile() {
   );
 
   // Watched Movie Card Component
-  const WatchedMovieCard = ({ watchedMovie }: { watchedMovie: any }) => {
+  const WatchedMovieCard = ({ watchedMovie }: { watchedMovie: WatchedMovieWithDetails }) => {
     const ratingDisplay = getRatingDisplay(watchedMovie.rating);
-    const movieDisplay = createWatchedMovieDisplay(watchedMovie);
+    const moodDisplay = getMoodDisplay(watchedMovie.current_Mood);
+    
+    // Use full TMDB data if available, otherwise fallback to placeholder
+    const movieDisplay = watchedMovie.fullMovieData || createWatchedMovieDisplay(watchedMovie);
     
     return (
       <Card 
@@ -332,6 +357,12 @@ export default function PriyanshuProfile() {
             <div className="absolute top-2 right-2 bg-green-600 rounded-full p-1">
               <Check className="h-3 w-3 text-white" />
             </div>
+            {/* Mood Badge */}
+            {watchedMovie.current_Mood && (
+              <div className="absolute top-2 left-2 bg-purple-600 rounded-full p-1" title={`Mood: ${moodDisplay.label}`}>
+                <span className="text-xs">{moodDisplay.emoji}</span>
+              </div>
+            )}
           </div>
           <div className="px-3 pb-3">
             <h3 className="text-sm font-medium text-white mb-1 line-clamp-2">{movieDisplay.title}</h3>
@@ -347,6 +378,14 @@ export default function PriyanshuProfile() {
               </span>
               <span className={`text-xs ${ratingDisplay.color}`}>{ratingDisplay.text}</span>
             </div>
+            {/* Mood Display */}
+            {watchedMovie.current_Mood && (
+              <div className="flex items-center justify-center mt-2">
+                <span className="text-xs text-purple-400">
+                  {moodDisplay.emoji} {moodDisplay.label}
+                </span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -371,7 +410,7 @@ export default function PriyanshuProfile() {
           <span className="text-xl font-bold text-white drop-shadow-lg">Priyanshu's Fire TV</span>
         </div>
         
-        <div className="w-24"></div> {/* Spacer for centering */}
+        <div className="w-24"></div>
       </header>
 
       {/* Hero Carousel Section */}
@@ -405,7 +444,7 @@ export default function PriyanshuProfile() {
               {priyanshuHeroContent.map((movie, index) => (
                 <CarouselItem key={movie.id} className="h-full">
                   <div 
-                    className="relative w-full size-150 bg-cover bg-center bg-no-repeat transition-all duration-500"
+                    className="relative w-full h-full bg-cover bg-center bg-no-repeat transition-all duration-500"
                     style={{
                       backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.3)), url('${movie.image}')`,
                       backgroundSize: 'cover',
@@ -470,55 +509,6 @@ export default function PriyanshuProfile() {
         )}
       </div>
 
-      {/* Original Hero Section (replaced) */}
-      <div className="relative h-[66vh] overflow-hidden" style={{display: 'none'}}>
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="flex flex-col items-center space-y-4">
-              <RefreshCw className="h-8 w-8 animate-spin text-purple-500" />
-              <p className="text-white/80">Loading your content...</p>
-            </div>
-          </div>
-        ) : heroContent.length > 0 ? (
-          <div 
-            className="absolute inset-0 bg-cover bg-center transition-all duration-500"
-            style={{
-              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.3)), url('${heroContent[currentHeroIndex]?.image}')`
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-            
-            <div className="relative z-10 flex items-center h-full p-8">
-              <div className="max-w-2xl">
-                <Badge className="mb-4 bg-purple-600 hover:bg-purple-700">
-                  {heroContent[currentHeroIndex]?.rating}
-                </Badge>
-                <h1 className="text-5xl font-bold mb-4 text-white">
-                  {heroContent[currentHeroIndex]?.title}
-                </h1>
-                <p className="text-lg mb-2 text-purple-400">
-                  Compelling stories for Priyanshu
-                </p>
-                <p className="text-white/80 mb-6 text-lg leading-relaxed line-clamp-3">
-                  {heroContent[currentHeroIndex]?.description}
-                </p>
-                
-                <div className="flex space-x-4">
-                  <Button className="bg-white text-black hover:bg-gray-200 px-6 py-3 text-lg">
-                    <Play className="mr-2 h-5 w-5" />
-                    Watch Now
-                  </Button>
-                  <Button variant="outline" className="border-white text-white hover:bg-white/20 px-6 py-3 text-lg">
-                    <Info className="mr-2 h-5 w-5" />
-                    Learn More
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
-
       {/* Navigation and Streaming Apps */}
       <div className="px-8 pt-4 pb-0 mb-4">
         <div className="flex items-center justify-between">
@@ -550,50 +540,59 @@ export default function PriyanshuProfile() {
         </div>
       </div>
 
-      {/* Trending Drama & Romance */}
-      {!loading && !error && priyanshuMovies(trendingMovies).length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6 text-purple-400">Trending Drama & Romance</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {priyanshuMovies(trendingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
+      {/* Personal Recommendations Sections */}
+      {!loading && !error && personalizedMovies.length > 0 && (
+        <>
+          {/* Your Personal Picks */}
+          <div className="px-8 py-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-purple-400 flex items-center">
+                🎯 Your Personal Picks
+              </h2>
+              <Badge variant="secondary" className="bg-purple-600 text-purple-100">
+                {personalizedMovies.length} total movies
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+              {personalizedMovies.slice(0, 8).map((movie) => (
+                <MovieCard key={movie.id} movie={movie} />
+              ))}
+            </div>
           </div>
-        </div>
+
+          {/* More Drama & Romance */}
+          {personalizedMovies.length > 8 && (
+            <div className="px-8 py-6">
+              <h2 className="text-2xl font-bold mb-6">🌟 More Drama & Romance</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                {personalizedMovies.slice(8, 16).map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fresh Recommendations */}
+          {personalizedMovies.length > 16 && (
+            <div className="px-8 py-6">
+              <h2 className="text-2xl font-bold mb-6">🔥 Fresh Recommendations</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                {personalizedMovies.slice(16).map((movie) => (
+                  <MovieCard key={movie.id} movie={movie} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Popular Drama Collection */}
-      {!loading && !error && popularMovies.length > 0 && (
+      {/* No Recommendations State */}
+      {!loading && !error && personalizedMovies.length === 0 && (
         <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Popular Drama Collection</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {priyanshuMovies(popularMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top Rated Mysteries */}
-      {!loading && !error && topRatedMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Top Rated Mysteries</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {priyanshuMovies(topRatedMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Biographical Stories */}
-      {!loading && !error && nowPlayingMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Biographical Stories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {priyanshuMovies(nowPlayingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
+          <div className="text-center text-gray-400">
+            <RefreshCw className="mx-auto h-12 w-12 mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">Building your recommendations...</h3>
+            <p className="text-sm">Watch some movies to get personalized suggestions!</p>
           </div>
         </div>
       )}
@@ -612,7 +611,11 @@ export default function PriyanshuProfile() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {watchedMovies.map((watchedMovie) => (
-              <WatchedMovieCard key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} watchedMovie={watchedMovie} />
+              <WatchedMovieCard 
+                key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} 
+                watchedMovie={watchedMovie} 
+                onMovieClick={handleMovieClick}
+              />
             ))}
           </div>
         </div>

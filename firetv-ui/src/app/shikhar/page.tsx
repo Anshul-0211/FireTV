@@ -29,10 +29,12 @@ import {
 } from "@/components/ui/carousel"
 import Autoplay from "embla-carousel-autoplay"
 import { useMovieData } from '@/hooks/useMovieData';
+import { useRecommendations } from '@/hooks/useRecommendations';
 import { Movie, MovieRating } from '@/types/movie';
 import { useWatchedMovie } from '@/hooks/useWatchedMovie';
-import { useWatchedMovies } from '@/hooks/useWatchedMovies';
+import { useWatchedMovies, WatchedMovieWithDetails } from '@/hooks/useWatchedMovies';
 import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/utils/movie.utils';
+import { WatchedMovieCard } from '@/components/WatchedMovieCard';
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
 import Link from 'next/link';
@@ -46,17 +48,22 @@ export default function ShikharProfile() {
     Autoplay({ delay: 3000, stopOnInteraction: true })
   );
 
-  // Shikhar's preferences - Comedy, Family, Animation
+  // Fetch personalized recommendations for Shikhar
+  const { 
+    recommendations: personalizedMovies,
+    loading: recommendationsLoading, 
+    error: recommendationsError,
+    refetch: refetchRecommendations,
+    refresh: refreshRecommendations
+  } = useRecommendations('shikhar');
+
+  // Fetch general movie data for hero content and streaming apps
   const { 
     heroContent, 
-    trendingMovies, 
-    popularMovies, 
-    topRatedMovies,
-    nowPlayingMovies,
     streamingApps, 
-    loading, 
-    error, 
-    refetch 
+    loading: generalLoading, 
+    error: generalError, 
+    refetch: refetchGeneral 
   } = useMovieData(false);
 
   // Fetch watched movies for Shikhar
@@ -74,6 +81,26 @@ export default function ShikharProfile() {
     hideMoodSelector
   } = useMoodSelector('shikhar', 'shikhar');
 
+  // Combined loading and error states
+  const loading = recommendationsLoading || generalLoading;
+  const error = recommendationsError || generalError;
+
+  // Use personalized recommendations as the main content
+  const trendingMovies = personalizedMovies;
+  const popularMovies = personalizedMovies;
+  const topRatedMovies = personalizedMovies;
+  const nowPlayingMovies = personalizedMovies;
+
+  // Debug: Log the first converted movie to verify data structure
+  if (personalizedMovies.length > 0) {
+    console.log('🎬 Sample converted movie:', personalizedMovies[0]);
+  }
+
+  // Refetch function that refreshes both recommendations and general data
+  const refetch = async () => {
+    await Promise.all([refetchRecommendations(), refetchGeneral()]);
+  };
+
   // Filter hero content for Shikhar's preferences
   const shikharHeroContent = heroContent.filter(movie => 
     movie.genre && ['Comedy', 'Family', 'Animation', 'Adventure', 'Fantasy'].includes(movie.genre)
@@ -88,12 +115,6 @@ export default function ShikharProfile() {
     setIsModalOpen(false);
     setSelectedMovie(null);
   };
-
-  // Filter movies for Shikhar's preferences (Comedy, Family, Animation)
-  const shikharMovies = (movies: Movie[]) => 
-    movies.filter(movie => 
-      ['Comedy', 'Family', 'Animation', 'Adventure', 'Fantasy'].includes(movie.genre)
-    );
 
   // Movie Details Modal Component with Watched functionality
   const MovieModal = () => {
@@ -238,7 +259,7 @@ export default function ShikharProfile() {
                        {selectedMovie.rating}
                      </Badge>
                      <span className="text-yellow-400 font-semibold text-sm">
-                       ★ {selectedMovie.voteAverage.toFixed(1)}/10
+                       ★ {(selectedMovie.voteAverage || 0).toFixed(1)}/10
                      </span>
                    </div>
 
@@ -291,7 +312,14 @@ export default function ShikharProfile() {
             className="w-full h-full object-cover"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = `https://via.placeholder.com/300x450/374151/9CA3AF?text=${encodeURIComponent(movie.title)}`;
+              target.src = `data:image/svg+xml;base64,${btoa(`
+                <svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100%" height="100%" fill="#374151"/>
+                  <text x="50%" y="50%" font-family="Arial" font-size="16" fill="#9CA3AF" text-anchor="middle" dominant-baseline="middle">
+                    ${movie.title}
+                  </text>
+                </svg>
+              `)}`;
             }}
           />
         </div>
@@ -304,54 +332,14 @@ export default function ShikharProfile() {
             <span className="text-xs text-gray-400">{movie.genre}</span>
           </div>
           <div className="mt-1 flex items-center">
-            <span className="text-xs text-yellow-400">★ {movie.voteAverage.toFixed(1)}</span>
+            <span className="text-xs text-yellow-400">★ {(movie.voteAverage || 0).toFixed(1)}</span>
           </div>
         </div>
       </CardContent>
     </Card>
   );
 
-  // Watched Movie Card Component
-  const WatchedMovieCard = ({ watchedMovie }: { watchedMovie: any }) => {
-    const ratingDisplay = getRatingDisplay(watchedMovie.rating);
-    const movieDisplay = createWatchedMovieDisplay(watchedMovie);
-    
-    return (
-      <Card 
-        className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-all duration-300 hover:scale-105 cursor-pointer p-0 relative"
-        onClick={() => handleMovieClick(movieDisplay as Movie)}
-      >
-        <CardContent className="p-0">
-          <div className="aspect-[2/3] bg-gray-700 rounded-t-lg mb-3 overflow-hidden relative">
-            <img 
-              src={movieDisplay.image} 
-              alt={movieDisplay.title}
-              className="w-full h-full object-cover"
-            />
-            {/* Watched Badge */}
-            <div className="absolute top-2 right-2 bg-green-600 rounded-full p-1">
-              <Check className="h-3 w-3 text-white" />
-            </div>
-          </div>
-          <div className="px-3 pb-3">
-            <h3 className="text-sm font-medium text-white mb-1 line-clamp-2">{movieDisplay.title}</h3>
-            <div className="flex items-center justify-between mb-1">
-              <Badge variant="secondary" className="text-xs bg-green-700 text-green-300">
-                Watched
-              </Badge>
-              <span className={`text-xs ${ratingDisplay.color}`}>{ratingDisplay.icon}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-400">
-                {new Date(watchedMovie.watchedAt).toLocaleDateString()}
-              </span>
-              <span className={`text-xs ${ratingDisplay.color}`}>{ratingDisplay.text}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  // Use the reusable WatchedMovieCard component
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-black text-white">
@@ -470,7 +458,46 @@ export default function ShikharProfile() {
         )}
       </div>
 
-      
+      {/* Personalized Recommendations */}
+      {!loading && !error && personalizedMovies.length > 0 && (
+        <div className="px-8 py-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-orange-400">🎯 Your Personal Library</h2>
+            <Badge variant="secondary" className="bg-orange-700 text-orange-300">
+              {personalizedMovies.length} movies
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            {personalizedMovies.slice(0, 8).map((movie) => (
+              <MovieCard key={movie.id} movie={movie} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* More Personal Recommendations */}
+      {!loading && !error && personalizedMovies.length > 8 && (
+        <div className="px-8 py-6">
+          <h2 className="text-2xl font-bold mb-6">🌟 More Just for You</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            {personalizedMovies.slice(8, 16).map((movie) => (
+              <MovieCard key={movie.id} movie={movie} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Additional Recommendations - Shows all remaining */}
+      {!loading && !error && personalizedMovies.length > 16 && (
+        <div className="px-8 py-6">
+          <h2 className="text-2xl font-bold mb-6">🔥 Recently Added</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            {personalizedMovies.slice(16).map((movie) => (
+              <MovieCard key={movie.id} movie={movie} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Navigation and Streaming Apps */}
       <div className="px-8 pt-4 pb-0 mb-4">
@@ -503,54 +530,6 @@ export default function ShikharProfile() {
         </div>
       </div>
 
-      {/* Trending Comedy & Family */}
-      {!loading && !error && shikharMovies(trendingMovies).length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6 text-orange-400">Trending Comedy & Family</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shikharMovies(trendingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Popular Family Movies */}
-      {!loading && !error && popularMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Popular Family Movies</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shikharMovies(popularMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top Rated Animation */}
-      {!loading && !error && topRatedMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Top Rated Animation</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shikharMovies(topRatedMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Fantasy Adventures */}
-      {!loading && !error && nowPlayingMovies.length > 0 && (
-        <div className="px-8 py-6">
-          <h2 className="text-2xl font-bold mb-6">Fantasy Adventures</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            {shikharMovies(nowPlayingMovies).slice(0, 8).map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Watched Movies Section */}
       {!watchedLoading && !watchedError && watchedMovies.length > 0 && (
         <div className="px-8 py-6">
@@ -565,7 +544,11 @@ export default function ShikharProfile() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             {watchedMovies.map((watchedMovie) => (
-              <WatchedMovieCard key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} watchedMovie={watchedMovie} />
+              <WatchedMovieCard 
+                key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} 
+                watchedMovie={watchedMovie} 
+                onMovieClick={handleMovieClick}
+              />
             ))}
           </div>
         </div>

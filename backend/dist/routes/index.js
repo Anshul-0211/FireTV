@@ -7,11 +7,13 @@ const express_1 = require("express");
 const userRoutes_1 = __importDefault(require("./userRoutes"));
 const moodRoutes_1 = __importDefault(require("./moodRoutes"));
 const watchedMovieRoutes_1 = __importDefault(require("./watchedMovieRoutes"));
+const recommendationRoutes_1 = __importDefault(require("./recommendationRoutes"));
 const router = (0, express_1.Router)();
 // API Routes
 router.use('/users', userRoutes_1.default);
 router.use('/moods', moodRoutes_1.default);
 router.use('/watched-movies', watchedMovieRoutes_1.default);
+router.use('/recommendations', recommendationRoutes_1.default);
 // Health check endpoint
 router.get('/health', (_req, res) => {
     res.status(200).json({
@@ -31,6 +33,7 @@ router.get('/', (_req, res) => {
             users: '/api/users',
             moods: '/api/moods',
             watchedMovies: '/api/watched-movies',
+            recommendations: '/api/recommendations',
             health: '/api/health'
         },
         documentation: 'See README.md for API documentation'
