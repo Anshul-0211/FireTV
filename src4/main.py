@@ -207,9 +207,9 @@ class HybridRecommendationEngine:
         self.collaborative_engine = CollaborativeFilteringEngine()
         
         # Cold start thresholds
-        self.min_users_for_cf = 10          # Minimum users needed for collaborative filtering
+        self.min_users_for_cf = 4          # Minimum users needed for collaborative filtering
         self.min_ratings_per_user = 5       # Minimum ratings per user for collaborative filtering
-        self.min_total_ratings = 50         # Minimum total ratings in system
+        self.min_total_ratings = 10         # Minimum total ratings in system
         
         # Genre mapping
         self.genre_mapping = {

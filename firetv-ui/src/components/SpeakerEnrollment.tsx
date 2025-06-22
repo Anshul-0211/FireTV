@@ -339,10 +339,8 @@ export const SpeakerEnrollment: React.FC<SpeakerEnrollmentProps> = ({
       <div className="text-sm text-gray-400 bg-gray-800/50 p-4 rounded-lg border border-gray-700">
         <h3 className="font-medium mb-2 text-cyan-400">Instructions:</h3>
         <ul className="list-disc list-inside space-y-1">
-          <li>Enter your name and click "Start Enrollment"</li>
-          <li>Speak clearly for about 10-15 seconds</li>
-          <li>The progress bar will show enrollment completion</li>
-          <li>Your voice profile will be saved automatically</li>
+          <li>Speak clearly and slowly the below sentence</li>
+          <li>Hi, my name is [Your Name], and I’m speaking this sentence so my voice can be recognized by the system. I enjoy reading, exploring new ideas, and learning about how technology works. The quick brown fox jumps over the lazy dog — a sentence that contains every letter of the alphabet. Hopefully, this gives enough variety for accurate voice recognition</li>
         </ul>
       </div>
     </div>
