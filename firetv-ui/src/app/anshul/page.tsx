@@ -36,6 +36,7 @@ import { useWatchedMovies, WatchedMovieWithDetails } from '@/hooks/useWatchedMov
 import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/utils/movie.utils';
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
+import { MovieBotWidget } from '@/components/MovieBotWidget';
 import Link from 'next/link';
 
 export default function AnshulProfile() {
@@ -93,6 +94,7 @@ export default function AnshulProfile() {
   // Debug: Log the first converted movie to verify data structure
   if (personalizedMovies.length > 0) {
     console.log('🎬 Sample converted movie for Anshul:', personalizedMovies[0]);
+    console.log(`📊 Dynamic AI Recommendations loaded: ${personalizedMovies.length} movies (growing with each watch!)`);
   }
 
   // Refetch function that refreshes both recommendations and general data
@@ -102,7 +104,7 @@ export default function AnshulProfile() {
 
   // Filter hero content for Anshul's preferences
   const anshulHeroContent = heroContent.filter(movie => 
-    movie.genre && ['Action', 'Thriller', 'Sci-Fi', 'Adventure'].includes(movie.genre)
+    movie.genre && ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller', 'Adventure'].includes(movie.genre)
   ).slice(0, 5);
 
   const handleMovieClick = (movie: Movie) => {
@@ -548,46 +550,22 @@ export default function AnshulProfile() {
       {/* Personal Recommendations Sections */}
       {!loading && !error && personalizedMovies.length > 0 && (
         <>
-          {/* Your Personal Picks */}
+          {/* AI Recommendation */}
           <div className="px-8 py-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-blue-400 flex items-center">
-                🎯 Your Personal Picks
+                🤖 AI Recommendation
               </h2>
               <Badge variant="secondary" className="bg-blue-600 text-blue-100">
-                {personalizedMovies.length} total movies
+                {personalizedMovies.length} movies (growing)
               </Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-              {personalizedMovies.slice(0, 8).map((movie) => (
+              {personalizedMovies.map((movie) => (
                 <MovieCard key={movie.id} movie={movie} />
               ))}
             </div>
           </div>
-
-          {/* More Action & Thriller */}
-          {personalizedMovies.length > 8 && (
-            <div className="px-8 py-6">
-              <h2 className="text-2xl font-bold mb-6">🌟 More Action & Thriller</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                {personalizedMovies.slice(8, 16).map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Fresh Recommendations */}
-          {personalizedMovies.length > 16 && (
-            <div className="px-8 py-6">
-              <h2 className="text-2xl font-bold mb-6">🔥 Fresh Recommendations</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                {personalizedMovies.slice(16).map((movie) => (
-                  <MovieCard key={movie.id} movie={movie} />
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -641,10 +619,18 @@ export default function AnshulProfile() {
         isAnimating={moodState.isAnimating}
         onMoodSelect={selectMood}
         onClose={hideMoodSelector}
+        userName="Anshul"
       />
 
-      
-      
+      {/* Movie Bot Widget */}
+      <MovieBotWidget
+        profileName="Anshul"
+        profileColor="blue"
+        onMovieRecommendation={(movies) => {
+          console.log('🎬 AI Movie Recommendations for Anshul:', movies);
+          // TODO: Optionally integrate with existing recommendation system
+        }}
+      />
     </div>
   );
 } 

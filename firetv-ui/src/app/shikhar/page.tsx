@@ -37,6 +37,7 @@ import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/u
 import { WatchedMovieCard } from '@/components/WatchedMovieCard';
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
+import { MovieBotWidget } from '@/components/MovieBotWidget';
 import Link from 'next/link';
 
 export default function ShikharProfile() {
@@ -458,6 +459,37 @@ export default function ShikharProfile() {
         )}
       </div>
 
+      {/* Navigation and Streaming Apps */}
+      <div className="px-8 pt-4 pb-0 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3 flex-shrink-0 mr-8">
+            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
+              <User className="h-18 w-18 scale-170" />
+            </Button>
+            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
+              <Home className="h-18 w-18 scale-170" />
+            </Button>
+            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
+              <Search className="h-18 w-18 scale-170" />
+            </Button>
+            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
+              <Mic className="h-18 w-18 scale-170" />
+            </Button>
+          </div>
+          
+          <div className="flex space-x-4 overflow-x-auto pb-2 scrollbar-hide flex-1">
+            {streamingApps.map((app, index) => (
+              <div key={index} className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
+                <div className={`w-24 h-20 ${app.color} rounded-lg flex items-center justify-center mb-2`}>
+                  <span className="text-white font-bold text-2xl">{app.logo}</span>
+                </div>
+                <p className="text-xs text-white text-center">{app.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Personalized Recommendations */}
       {!loading && !error && personalizedMovies.length > 0 && (
         <div className="px-8 py-6">
@@ -499,36 +531,7 @@ export default function ShikharProfile() {
         </div>
       )}
 
-      {/* Navigation and Streaming Apps */}
-      <div className="px-8 pt-4 pb-0 mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 flex-shrink-0 mr-8">
-            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
-              <User className="h-18 w-18 scale-170" />
-            </Button>
-            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
-              <Home className="h-18 w-18 scale-170" />
-            </Button>
-            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
-              <Search className="h-18 w-18 scale-170" />
-            </Button>
-            <Button variant="ghost" className="w-18 h-18 p-0 text-white hover:bg-white/20 rounded-lg">
-              <Mic className="h-18 w-18 scale-170" />
-            </Button>
-          </div>
-          
-          <div className="flex space-x-4 overflow-x-auto pb-2 scrollbar-hide flex-1">
-            {streamingApps.map((app, index) => (
-              <div key={index} className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform">
-                <div className={`w-24 h-20 ${app.color} rounded-lg flex items-center justify-center mb-2`}>
-                  <span className="text-white font-bold text-2xl">{app.logo}</span>
-                </div>
-                <p className="text-xs text-white text-center">{app.name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      
 
       {/* Watched Movies Section */}
       {!watchedLoading && !watchedError && watchedMovies.length > 0 && (
@@ -574,6 +577,16 @@ export default function ShikharProfile() {
         onMoodSelect={selectMood}
         onClose={hideMoodSelector}
         userName="Shikhar"
+      />
+
+      {/* Movie Bot Widget */}
+      <MovieBotWidget
+        profileName="Shikhar"
+        profileColor="green"
+        onMovieRecommendation={(movies) => {
+          console.log('🎬 AI Movie Recommendations for Shikhar:', movies);
+          // TODO: Optionally integrate with existing recommendation system
+        }}
       />
     </div>
   );

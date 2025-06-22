@@ -37,6 +37,7 @@ import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/u
 
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
+import { MovieBotWidget } from '@/components/MovieBotWidget';
 import Link from 'next/link';
 
 export default function PriyanshuProfile() {
@@ -614,7 +615,6 @@ export default function PriyanshuProfile() {
               <WatchedMovieCard 
                 key={`${watchedMovie.tmdbId}-${watchedMovie.watchedAt}`} 
                 watchedMovie={watchedMovie} 
-                onMovieClick={handleMovieClick}
               />
             ))}
           </div>
@@ -641,6 +641,16 @@ export default function PriyanshuProfile() {
         onMoodSelect={selectMood}
         onClose={hideMoodSelector}
         userName="Priyanshu"
+      />
+
+      {/* Movie Bot Widget */}
+      <MovieBotWidget
+        profileName="Priyanshu"
+        profileColor="purple"
+        onMovieRecommendation={(movies) => {
+          console.log('🎬 AI Movie Recommendations for Priyanshu:', movies);
+          // TODO: Optionally integrate with existing recommendation system
+        }}
       />
     </div>
   );

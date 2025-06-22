@@ -258,7 +258,7 @@ export const SpeakerEnrollment: React.FC<SpeakerEnrollmentProps> = ({
         />
       </div>
 
-      {enrollmentState.isEnrolling && (
+      {/* {enrollmentState.isEnrolling && (
         <div className="mb-6">
           <div className="flex justify-between text-sm text-cyan-400 mb-2">
             <span>Enrollment Progress</span>
@@ -271,7 +271,7 @@ export const SpeakerEnrollment: React.FC<SpeakerEnrollmentProps> = ({
             />
           </div>
         </div>
-      )}
+      )} */}
 
       {isRecording && (
         <div className="mb-6">

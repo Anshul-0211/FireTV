@@ -37,6 +37,7 @@ import { createWatchedMovieDisplay, getRatingDisplay, getMoodDisplay } from '@/u
 import { WatchedMovieCard } from '@/components/WatchedMovieCard';
 import { useMoodSelector } from '@/hooks/useMoodSelector';
 import { MoodSelector } from '@/components/MoodSelector';
+import { MovieBotWidget } from '@/components/MovieBotWidget';
 import Link from 'next/link';
 
 export default function ShauryaProfile() {
@@ -633,6 +634,16 @@ export default function ShauryaProfile() {
         onMoodSelect={selectMood}
         onClose={hideMoodSelector}
         userName="Shaurya"
+      />
+
+      {/* Movie Bot Widget */}
+      <MovieBotWidget
+        profileName="Shaurya"
+        profileColor="red"
+        onMovieRecommendation={(movies) => {
+          console.log('🎬 AI Movie Recommendations for Shaurya:', movies);
+          // TODO: Optionally integrate with existing recommendation system
+        }}
       />
     </div>
   );

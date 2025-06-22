@@ -10,7 +10,7 @@ export class RecommendationController {
   static async getRecommendations(req: Request, res: Response): Promise<void> {
     try {
       const { username } = req.params;
-      const limit = parseInt(req.query.limit as string) || 30;
+      const limitParam = req.query.limit as string;
       
       if (!username) {
         res.status(400).json({
@@ -32,16 +32,28 @@ export class RecommendationController {
       
       const tableName = `${username}_dash`;
       
-      const query = `
+      // Build query with optional LIMIT
+      let query = `
         SELECT tmdb_id, title, genres, vote_average, popularity, 
                overview, poster_path, similarity_score, added_at
         FROM ${tableName} 
         WHERE is_active = TRUE 
-        ORDER BY similarity_score DESC, added_at DESC 
-        LIMIT $1
+        ORDER BY similarity_score DESC, added_at DESC
       `;
       
-      const result = await pool.query(query, [limit]);
+      const queryParams: any[] = [];
+      
+      // Only add LIMIT if explicitly provided
+      if (limitParam && !isNaN(parseInt(limitParam))) {
+        const limit = parseInt(limitParam);
+        query += ` LIMIT $1`;
+        queryParams.push(limit);
+      }
+      // No LIMIT clause means return ALL recommendations (dynamic growth)
+      
+      const result = await pool.query(query, queryParams);
+      
+      console.log(`📊 Returned ${result.rows.length} recommendations for ${username} (${limitParam ? 'limited to ' + limitParam : 'unlimited'})`);
       
       res.status(200).json({
         success: true,
